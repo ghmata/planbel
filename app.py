@@ -99,7 +99,7 @@ else:
             with st.spinner('Consultando a BNCC e estruturando sua aula... Aguarde...'):
                 try:
                     # --- CRIAÇÃO DO PROMPT PROFISSIONAL ---
-                    model = genai.GenerativeModel('gemini-1.0-pro')
+                    model = genai.GenerativeModel('gemini-1.5-flash')
                     
                     prompt_sistema = f"""
                     Você é um Coordenador Pedagógico Especialista na BNCC (Base Nacional Comum Curricular) do Brasil.
