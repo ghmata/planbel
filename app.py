@@ -1,5 +1,6 @@
 import streamlit as st
 import google.generativeai as genai
+from datetime import datetime
 
 # --- CONFIGURAÇÃO DA PÁGINA ---
 st.set_page_config(
@@ -37,6 +38,202 @@ st.markdown("""
     }
 </style>
 """, unsafe_allow_html=True)
+
+# --- FUNÇÃO PARA CONVERTER MARKDOWN EM HTML ---
+def markdown_to_html(markdown_text, tema, serie, componente):
+    """Converte o plano de aula em HTML estilizado"""
+    
+    # Template HTML profissional
+    html_template = f"""
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plano de Aula - {tema}</title>
+    <style>
+        * {{
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }}
+        
+        body {{
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: #f5f5f5;
+            padding: 20px;
+        }}
+        
+        .container {{
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            padding: 40px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+            border-radius: 10px;
+        }}
+        
+        .header {{
+            text-align: center;
+            border-bottom: 4px solid #4CAF50;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }}
+        
+        .header h1 {{
+            color: #2c3e50;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }}
+        
+        .header .subtitle {{
+            color: #7f8c8d;
+            font-size: 1.2em;
+        }}
+        
+        .metadata {{
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+            border-left: 5px solid #4CAF50;
+        }}
+        
+        .metadata p {{
+            margin: 8px 0;
+            color: #555;
+        }}
+        
+        .metadata strong {{
+            color: #2c3e50;
+        }}
+        
+        h2 {{
+            color: #4CAF50;
+            font-size: 1.8em;
+            margin-top: 30px;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #e0e0e0;
+        }}
+        
+        h3 {{
+            color: #2c3e50;
+            font-size: 1.4em;
+            margin-top: 20px;
+            margin-bottom: 10px;
+        }}
+        
+        p {{
+            margin-bottom: 15px;
+            text-align: justify;
+        }}
+        
+        ul, ol {{
+            margin-left: 30px;
+            margin-bottom: 15px;
+        }}
+        
+        li {{
+            margin-bottom: 8px;
+        }}
+        
+        .bncc-code {{
+            background: #e8f5e9;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            color: #2e7d32;
+        }}
+        
+        .section {{
+            margin-bottom: 30px;
+        }}
+        
+        .footer {{
+            margin-top: 50px;
+            padding-top: 20px;
+            border-top: 2px solid #e0e0e0;
+            text-align: center;
+            color: #7f8c8d;
+            font-size: 0.9em;
+        }}
+        
+        @media print {{
+            body {{
+                background: white;
+                padding: 0;
+            }}
+            .container {{
+                box-shadow: none;
+                padding: 20px;
+            }}
+        }}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📚 Plano de Aula</h1>
+            <div class="subtitle">Baseado na BNCC</div>
+        </div>
+        
+        <div class="metadata">
+            <p><strong>Tema:</strong> {tema}</p>
+            <p><strong>Série/Ano:</strong> {serie}</p>
+            <p><strong>Componente Curricular:</strong> {componente}</p>
+            <p><strong>Data de Geração:</strong> {datetime.now().strftime("%d/%m/%Y às %H:%M")}</p>
+        </div>
+        
+        <div class="content">
+            {markdown_text}
+        </div>
+        
+        <div class="footer">
+            <p>Plano de Aula gerado automaticamente pelo Planejador BNCC 2.0</p>
+            <p>Desenvolvido com Python, Streamlit e Google Gemini AI</p>
+        </div>
+    </div>
+</body>
+</html>
+"""
+    
+    # Conversões básicas de Markdown para HTML
+    html_content = markdown_text
+    
+    # Negrito
+    import re
+    html_content = re.sub(r'\*\*(.*?)\*\*', r'<strong>\1</strong>', html_content)
+    
+    # Itálico
+    html_content = re.sub(r'\*(.*?)\*', r'<em>\1</em>', html_content)
+    
+    # Títulos
+    html_content = re.sub(r'^### (.*?)$', r'<h3>\1</h3>', html_content, flags=re.MULTILINE)
+    html_content = re.sub(r'^## (.*?)$', r'<h2>\1</h2>', html_content, flags=re.MULTILINE)
+    html_content = re.sub(r'^# (.*?)$', r'<h1>\1</h1>', html_content, flags=re.MULTILINE)
+    
+    # Listas não ordenadas
+    html_content = re.sub(r'^\- (.*?)$', r'<li>\1</li>', html_content, flags=re.MULTILINE)
+    html_content = re.sub(r'(<li>.*?</li>\n?)+', r'<ul>\g<0></ul>', html_content, flags=re.DOTALL)
+    
+    # Listas ordenadas
+    html_content = re.sub(r'^\d+\. (.*?)$', r'<li>\1</li>', html_content, flags=re.MULTILINE)
+    
+    # Parágrafos
+    html_content = re.sub(r'\n\n', r'</p><p>', html_content)
+    html_content = f'<p>{html_content}</p>'
+    
+    # Destaque para códigos BNCC (exemplo: EF01LP01)
+    html_content = re.sub(r'\b(EF\d{2}[A-Z]{2}\d{2})\b', r'<span class="bncc-code">\1</span>', html_content)
+    
+    # Insere o conteúdo no template
+    final_html = html_template.replace('{markdown_text}', html_content)
+    
+    return final_html
 
 # --- BARRA LATERAL (INPUTS) ---
 with st.sidebar:
@@ -99,7 +296,7 @@ else:
             with st.spinner('Consultando a BNCC e estruturando sua aula... Aguarde...'):
                 try:
                     # --- CRIAÇÃO DO PROMPT PROFISSIONAL ---
-                    model = genai.GenerativeModel('gemini-2.5-flash')
+                    model = genai.GenerativeModel('gemini-2.0-flash-exp')
                     
                     prompt_sistema = f"""
                     Você é um Coordenador Pedagógico Especialista na BNCC (Base Nacional Comum Curricular) do Brasil.
@@ -135,17 +332,40 @@ else:
                     response = model.generate_content(prompt_sistema)
                     
                     # Exibição do Resultado
-                    st.success("Plano de Aula Gerado com Sucesso!")
+                    st.success("✅ Plano de Aula Gerado com Sucesso!")
                     st.markdown("---")
                     st.markdown(response.text)
                     
-                    # Botão para baixar (Gambiarra funcional no Streamlit para txt)
-                    st.download_button(
-                        label="📥 Baixar Plano de Aula (TXT)",
-                        data=response.text,
-                        file_name=f"Plano_Aula_{tema_aula}.txt",
-                        mime="text/plain"
+                    # Gerar HTML
+                    html_content = markdown_to_html(
+                        response.text,
+                        tema_aula,
+                        serie_ano,
+                        componente
                     )
+                    
+                    # Criar colunas para os botões de download
+                    col1, col2 = st.columns(2)
+                    
+                    with col1:
+                        st.download_button(
+                            label="📥 Baixar Plano em HTML",
+                            data=html_content,
+                            file_name=f"Plano_Aula_{tema_aula.replace(' ', '_')}.html",
+                            mime="text/html",
+                            use_container_width=True
+                        )
+                    
+                    with col2:
+                        st.download_button(
+                            label="📄 Baixar Plano em TXT",
+                            data=response.text,
+                            file_name=f"Plano_Aula_{tema_aula.replace(' ', '_')}.txt",
+                            mime="text/plain",
+                            use_container_width=True
+                        )
+                    
+                    st.info("💡 Dica: O arquivo HTML pode ser aberto em qualquer navegador e impresso diretamente!")
                     
                 except Exception as e:
                     st.error(f"Ocorreu um erro: {e}")
