@@ -1,6 +1,7 @@
 import streamlit as st
 import google.generativeai as genai
 from datetime import datetime
+import time # Importação necessária para o sleep (backoff)
 
 # --- CONFIGURAÇÃO DA PÁGINA ---
 st.set_page_config(
@@ -10,7 +11,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# --- ESTILIZAÇÃO CSS PERSONALIZADA (Para visual moderno) ---
+# [MANTÉM TODA A ESTILIZAÇÃO CSS PERSONALIZADA]
 st.markdown("""
 <style>
     .stButton>button {
@@ -39,11 +40,10 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- FUNÇÃO PARA CONVERTER MARKDOWN EM HTML ---
+# [MANTÉM A FUNÇÃO markdown_to_html]
 def markdown_to_html(markdown_text, tema, serie, componente):
-    """Converte o plano de aula em HTML estilizado"""
-    
     # Template HTML profissional
+    # ... (Seu template HTML completo) ...
     html_template = f"""
 <!DOCTYPE html>
 <html lang="pt-BR">
@@ -293,83 +293,100 @@ else:
         if not tema_aula:
             st.error("Por favor, informe o tema da aula.")
         else:
-            with st.spinner('Consultando a BNCC e estruturando sua aula... Aguarde...'):
+            # Variáveis para a lógica de re-tentativa
+            max_retries = 3
+            initial_delay = 5  # Espera inicial em segundos
+
+            for attempt in range(max_retries):
                 try:
-                    # --- CRIAÇÃO DO PROMPT PROFISSIONAL ---
-                    model = genai.GenerativeModel('gemini-2.0-flash-exp')
-                    
-                    prompt_sistema = f"""
-                    Você é um Coordenador Pedagógico Especialista na BNCC (Base Nacional Comum Curricular) do Brasil.
-                    Sua tarefa é criar um Plano de Aula detalhado, prático e tecnicamente correto.
-                    
-                    DADOS DA AULA:
-                    - Nível: {nivel_ensino}
-                    - Série: {serie_ano}
-                    - Componente: {componente}
-                    - Tema: {tema_aula}
-                    - Duração: {duracao} minutos
-                    - Metodologia Ativa: {metodologia}
-                    - Recursos: {", ".join(recursos)}
-                    - Obs: {objetivo_extra}
+                    with st.spinner(f'Consultando a BNCC e estruturando sua aula... Tentativa {attempt + 1}/{max_retries}...'):
+                        
+                        # --- MODIFICAÇÃO 1: OTIMIZAÇÃO DO PROMPT DE ENTRADA (TOKENS) ---
+                        # Simplificando a instrução do sistema e os dados para reduzir o número de tokens
+                        # O template de saída agora é o foco.
+                        
+                        # Estrutura do prompt de forma mais compacta
+                        prompt_sistema = f"""
+Você é um Coordenador Pedagógico Especialista na BNCC. Sua tarefa é criar um Plano de Aula DETALHADO e PRÁTICO para os dados fornecidos.
 
-                    ESTRUTURA OBRIGATÓRIA DA RESPOSTA (Use Markdown):
-                    1. **Cabeçalho Técnico**: Resumo dos dados.
-                    2. **Alinhamento BNCC**:
-                       - Identifique e cite os **Códigos Alfanuméricos** da BNCC mais adequados para este tema e série (Ex: EF01LP01).
-                       - Descreva a Habilidade correspondente.
-                       - Cite as Competências Gerais ou Específicas envolvidas.
-                    3. **Objetivos de Aprendizagem**:
-                       - Geral.
-                       - Específicos (pelo menos 3).
-                    4. **Desenvolvimento da Aula (Passo a Passo com tempos estimados)**:
-                       - Introdução/Engajamento.
-                       - Desenvolvimento/Exploração (Aplicação da metodologia {metodologia}).
-                       - Sistematização/Fechamento.
-                    5. **Avaliação**: Como verificar o aprendizado.
-                    6. **Adaptação**: Uma sugestão para inclusão (alunos com dificuldades ou deficiência).
-                    """
+DADOS DA AULA:
+- Nível/Série/Componente: {nivel_ensino}, {serie_ano}, {componente}
+- Tema: {tema_aula} (Duração: {duracao} minutos)
+- Estratégia/Recursos: {metodologia}, {", ".join(recursos)}
+- Extra: {objetivo_extra if objetivo_extra else 'Nenhum objetivo específico adicional.'}
 
-                    response = model.generate_content(prompt_sistema)
-                    
-                    # Exibição do Resultado
-                    st.success("✅ Plano de Aula Gerado com Sucesso!")
-                    st.markdown("---")
-                    st.markdown(response.text)
-                    
-                    # Gerar HTML
-                    html_content = markdown_to_html(
-                        response.text,
-                        tema_aula,
-                        serie_ano,
-                        componente
-                    )
-                    
-                    # Criar colunas para os botões de download
-                    col1, col2 = st.columns(2)
-                    
-                    with col1:
-                        st.download_button(
-                            label="📥 Baixar Plano em HTML",
-                            data=html_content,
-                            file_name=f"Plano_Aula_{tema_aula.replace(' ', '_')}.html",
-                            mime="text/html",
-                            use_container_width=True
-                        )
-                    
-                    with col2:
-                        st.download_button(
-                            label="📄 Baixar Plano em TXT",
-                            data=response.text,
-                            file_name=f"Plano_Aula_{tema_aula.replace(' ', '_')}.txt",
-                            mime="text/plain",
-                            use_container_width=True
-                        )
-                    
-                    st.info("💡 Dica: O arquivo HTML pode ser aberto em qualquer navegador e impresso diretamente!")
-                    
+INSTRUÇÕES DE SAÍDA OBRIGATÓRIAS (APENAS MARKDOWN):
+1. **Cabeçalho Técnico**
+2. **Alinhamento BNCC**: Cite Códigos Alfanuméricos (Ex: EF01LP01), Habilidade e Competências.
+3. **Objetivos de Aprendizagem**: Geral e Específicos (pelo menos 3).
+4. **Desenvolvimento da Aula (Passo a Passo)**: Com tempos estimados (Introdução, Desenvolvimento com {metodologia}, Fechamento).
+5. **Avaliação**
+6. **Adaptação** (sugestão para inclusão/dificuldade).
+"""
+                        
+                        model = genai.GenerativeModel('gemini-2.0-flash') # MODIFICAÇÃO 2: Mudar para 'gemini-2.0-flash' se 'gemini-2.0-flash-exp' é o que está dando problema na quota.
+                        
+                        response = model.generate_content(prompt_sistema)
+                        
+                        # Se a requisição foi bem-sucedida, saia do loop
+                        break 
+                        
+                except genai.errors.ResourceExhaustedError as e:
+                    # MODIFICAÇÃO 3: Captura e tratamento do erro 429
+                    st.warning(f"Quota Exceeded (429) na tentativa {attempt + 1}: {e}. O código irá esperar para re-tentar.")
+                    if attempt < max_retries - 1:
+                        # Implementa Backoff: espera crescente
+                        wait_time = initial_delay * (2 ** attempt)
+                        st.info(f"Aguardando {wait_time:.1f} segundos antes de re-tentar...")
+                        time.sleep(wait_time)
+                    else:
+                        st.error("🚫 Todas as tentativas falharam devido ao limite de taxa (Quota Exceeded). Por favor, espere alguns minutos ou verifique seu plano de API.")
+                        return # Sai do bloco if
+                
                 except Exception as e:
-                    st.error(f"Ocorreu um erro: {e}")
-                    st.error("Verifique se sua API Key está correta.")
+                    # Captura outros erros (ex: API Key incorreta)
+                    st.error(f"Ocorreu um erro inesperado: {e}")
+                    st.error("Verifique se sua API Key está correta ou se há um problema de conexão.")
+                    return # Sai do bloco if
+
+            # --- Exibição do Resultado (Executa SOMENTE se o loop de tentativas for bem-sucedido) ---
+            else: # O 'else' do loop 'for' é executado se o loop terminar sem um 'break' (ou seja, todas as tentativas falharam).
+                 return # Já tratamos a falha acima
+
+            st.success("✅ Plano de Aula Gerado com Sucesso!")
+            st.markdown("---")
+            st.markdown(response.text)
+            
+            # Gerar e baixar HTML/TXT
+            html_content = markdown_to_html(
+                response.text,
+                tema_aula,
+                serie_ano,
+                componente
+            )
+            
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                st.download_button(
+                    label="📥 Baixar Plano em HTML",
+                    data=html_content,
+                    file_name=f"Plano_Aula_{tema_aula.replace(' ', '_')}.html",
+                    mime="text/html",
+                    use_container_width=True
+                )
+            
+            with col2:
+                st.download_button(
+                    label="📄 Baixar Plano em TXT",
+                    data=response.text,
+                    file_name=f"Plano_Aula_{tema_aula.replace(' ', '_')}.txt",
+                    mime="text/plain",
+                    use_container_width=True
+                )
+            
+            st.info("💡 Dica: O arquivo HTML pode ser aberto em qualquer navegador e impresso diretamente!")
+
 
 # --- RODAPÉ ---
 st.markdown("---")
